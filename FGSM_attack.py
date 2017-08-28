@@ -5,7 +5,7 @@ import time
 import keras.backend as K
 
 class FGSM:
-    def __init__(self, sess, model, targeted = TARGETED, batch_size=1):
+    def __init__(self, sess, model, targeted=True, batch_size=1):
         """
         The implementation of Ian Goodfellow's FGSM attack.
 
@@ -18,7 +18,6 @@ class FGSM:
         self.sess = sess
         self.model = model
         self.epsilon = tf.placeholder(tf.float32)
-        self.TARGETED = targeted
         self.batch_size = batch_size
 
         shape = (batch_size,image_size,image_size,num_channels)
@@ -28,12 +27,9 @@ class FGSM:
         self.logits = self.model.predict(self.x)
         #Generate the gradient of the loss function.
         self.adv_loss = K.categorical_crossentropy(self.logits, self.y, from_logits=True)
-        print("adv_loss = ", self.adv_loss)
 
         #grad = K.gradients(self.adv_loss, x)
         self.grad = K.gradients(self.adv_loss, [self.x])[0]
-
-        print("grad = ", self.grad)
 
         # signed gradient
         self.normed_grad = K.sign(self.grad)
@@ -46,8 +42,6 @@ class FGSM:
 
         self.adv_x = K.clip(self.adv_x, 0, 1)
 
-        print("FGSM init done!!!")
-
         return
 
     def attack(self, imgs, targets, epsilon):
@@ -58,11 +52,11 @@ class FGSM:
         If self.targeted is false, then targets are the original class labels.
         """
 
-        print("Perofming FGSM attack in here")
+        print("Perofming FGSM attack")
 
         adv_x_concrete = self.sess.run(self.adv_x, feed_dict={self.x: imgs,
-                                               self.y: targets,
-                                               self.epsilon: epsilon})
-        print("Done on the FGSM attack :-)")
+                                                               self.y: targets,
+                                                               self.epsilon: epsilon})
+        print("Done on the FGSM attack")
 
         return adv_x_concrete
