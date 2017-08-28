@@ -19,6 +19,8 @@ from l0_attack import CarliniL0
 from li_attack import CarliniLi
 
 
+from FGSM_attack import FGSM
+
 from PIL import Image
 
 
@@ -75,19 +77,21 @@ def generate_data(data, samples, targeted=True, start=0, inception=False):
     return inputs, targets
 
 
+
 if __name__ == "__main__":
     with tf.Session() as sess:
         use_log = False
         print('Loading model...')
-        # data, model =  MNIST(), MNISTModel("models/mnist", sess, use_log)
+        data, model =  MNIST(), MNISTModel("models/mnist", sess, use_log)
         # data, model =  MNIST(), MNISTModel("models/mnist-distilled-100", sess, use_log)
         # data, model = CIFAR(), CIFARModel("models/cifar", sess, use_log)
-        data, model = ImageNet(), InceptionModel(sess, use_log)
+        # data, model = ImageNet(), InceptionModel(sess, use_log)
         print('Done...')
         batch_size = 1
         if isinstance(model, InceptionModel):
             batch_size = 10
-        attack = CarliniL2(sess, model, batch_size=batch_size, initial_const = 1.0, max_iterations=1000, confidence=0, use_log=use_log)
+        #attack = CarliniL2(sess, model, batch_size=batch_size, initial_const = 1.0, max_iterations=1000, confidence=0, use_log=use_log)
+        attack = FGSM(sess, model, targeted=True)
 
         print('Generate data')
         inputs, targets = generate_data(data, samples=1, targeted=True,
@@ -97,9 +101,13 @@ if __name__ == "__main__":
         inputs = inputs[0:batch_size]
         targets = targets[0:batch_size]
         timestart = time.time()
-        adv = attack.attack(inputs, targets)
+        #adv = attack.attack(inputs, targets)
+
+        epsilon = 0.3
+        adv = attack.attack(inputs, targets, epsilon)
+
         timeend = time.time()
-        
+
         print("Took",timeend-timestart,"seconds to run",len(inputs),"samples.")
 
         for i in range(len(adv)):
@@ -110,7 +118,7 @@ if __name__ == "__main__":
             print("Adversarial:")
             show(adv[i], "adversarial_{}.png".format(i))
             show(adv[i] - inputs[i], "attack_diff.png")
-            
+
             print("Classification:", np.argsort(model.model.predict(adv[i:i+1]))[-1:-6:-1])
 
             print("Total distortion:", np.sum((adv[i]-inputs[i])**2)**.5)
@@ -118,3 +126,57 @@ if __name__ == "__main__":
         # t = np.random.randn(28*28).reshape(1,28,28,1)
         # print(model.model.predict(t))
 
+
+
+"""
+if __name__ == "__main__":
+    with tf.Session() as sess:
+        use_log = False
+        print('Loading model...')
+
+        print('running FGSM attack')
+        data, model = MNIST(), MNISTModel("models/mnist", sess, use_log)
+        # data, model =  MNIST(), MNISTModel("models/mnist-distilled-100", sess, use_log)
+        # data, model = CIFAR(), CIFARModel("models/cifar", sess, use_log)
+        # data, model = ImageNet(), InceptionModel(sess, use_log)
+        print('Done...')
+
+        epsilon_value = 0.3
+        batch_size = 1
+        if isinstance(model, InceptionModel):
+            batch_size = 10
+
+        attack = FGSM(sess, model, targeted=True)
+
+        print('Generate data')
+        inputs, targets = generate_data(data, samples=1, targeted=True,
+                                        start=6, inception=isinstance(model, InceptionModel))
+        print('Done...')
+        print(inputs.shape)
+        inputs = inputs[0:batch_size]
+        targets = targets[0:batch_size]
+
+        timestart = time.time()
+        adv = attack.attack(inputs, targets, epsilon_value)
+        #print("adv = ", adv)
+        timeend = time.time()
+
+        print("Took", timeend - timestart, "seconds to run", len(inputs), "samples.")
+
+        for i in range(len(adv)):
+            print("Valid:")
+            show(inputs[i], "original_{}.png".format(i))
+            print("Classification:", np.argsort(model.model.predict(inputs[i:i+1]))[-1:-6:-1])
+            print("Target:", np.argmax(targets[i]))
+            print("Adversarial:")
+            show(adv[i], "adversarial_{}.png".format(i))
+            show(adv[i] - inputs[i], "attack_diff.png")
+
+            print("Classification:", np.argsort(model.model.predict(adv[i:i+1]))[-1:-6:-1])
+
+            print("Total distortion:", np.sum((adv[i]-inputs[i])**2)**.5)
+
+        # t = np.random.randn(28*28).reshape(1,28,28,1)
+        # print(model.model.predict(t))
+        print("all done!!!")
+"""
