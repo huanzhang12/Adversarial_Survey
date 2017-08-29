@@ -40,7 +40,7 @@ class Iter_FGSM:
         # Add perturbation to original example to obtain adversarial example
         self.adv_x = K.stop_gradient(self.x + self.scaled_grad)
 
-        self.adv_x = K.clip(self.adv_x, 0, 1)
+        self.adv_x = K.clip(self.adv_x, -0.5, 0.5)
 
         return
 
