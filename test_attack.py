@@ -91,7 +91,7 @@ if __name__ == "__main__":
         if isinstance(model, InceptionModel):
             batch_size = 10
         #attack = CarliniL2(sess, model, batch_size=batch_size, initial_const = 1.0, max_iterations=1000, confidence=0, use_log=use_log)
-        attack = FGSM(sess, model, targeted=True)
+        attack = FGSM(sess, model, targeted=True, batch_size = batch_size)
 
         print('Generate data')
         inputs, targets = generate_data(data, samples=1, targeted=True,
