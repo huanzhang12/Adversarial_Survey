@@ -12,6 +12,7 @@ class FGSM:
         Returns adversarial examples for the supplied model.
 
         targeted: True if we should perform a targetted attack, False otherwise.
+        default is targeted.
         """
 
         image_size, num_channels, num_labels = model.image_size, model.num_channels, model.num_labels
@@ -27,7 +28,8 @@ class FGSM:
         self.logits = self.model.predict(self.x)
         #Generate the gradient of the loss function.
         self.adv_loss = K.categorical_crossentropy(self.logits, self.y, from_logits=True)
-
+        if not targeted:
+            self.adv_loss = -self.adv_loss
         #grad = K.gradients(self.adv_loss, x)
         self.grad = K.gradients(self.adv_loss, [self.x])[0]
 
