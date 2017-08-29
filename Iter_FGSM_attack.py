@@ -62,6 +62,6 @@ class Iter_FGSM:
         print("performing iter_FGSM attack")
         adv_x = imgs
         for i in range(steps):
-            adv_x = single_attack(self, adv_x, targets, epsilon)
+            adv_x = self.single_attack(adv_x, targets, epsilon)
         print("Done on the iter_FGSM attack")
         return adv_x
