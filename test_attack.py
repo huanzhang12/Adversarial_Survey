@@ -81,20 +81,21 @@ def generate_data(data, samples, targeted=True, start=0, inception=False):
 if __name__ == "__main__":
     with tf.Session() as sess:
         use_log = False
+        targeted = False
         print('Loading model...')
         data, model =  MNIST(), MNISTModel("models/mnist", sess, use_log)
         # data, model =  MNIST(), MNISTModel("models/mnist-distilled-100", sess, use_log)
         # data, model = CIFAR(), CIFARModel("models/cifar", sess, use_log)
         # data, model = ImageNet(), InceptionModel(sess, use_log)
         print('Done...')
-        batch_size = 1
+        batch_size = 9
         if isinstance(model, InceptionModel):
             batch_size = 10
         #attack = CarliniL2(sess, model, batch_size=batch_size, initial_const = 1.0, max_iterations=1000, confidence=0, use_log=use_log)
-        attack = FGSM(sess, model, targeted=True, batch_size = batch_size)
+        attack = FGSM(sess, model, targeted=targeted, use_log=use_log, batch_size = batch_size)
 
         print('Generate data')
-        inputs, targets = generate_data(data, samples=1, targeted=True,
+        inputs, targets = generate_data(data, samples=9, targeted=targeted,
                                         start=6, inception=isinstance(model, InceptionModel))
         print('Done...')
         print(inputs.shape)
@@ -113,15 +114,30 @@ if __name__ == "__main__":
         for i in range(len(adv)):
             print("Valid:")
             show(inputs[i], "original_{}.png".format(i))
-            print("Classification:", np.argsort(model.model.predict(inputs[i:i+1]))[-1:-6:-1])
+            original_predict = np.squeeze(model.model.predict(inputs[i:i+1]))
+            print("Original Classification:", np.argsort(original_predict)[-1:-11:-1])
+            print("Original Probabilities/Logits:", np.sort(original_predict)[-1:-11:-1])
             print("Target:", np.argmax(targets[i]))
             print("Adversarial:")
             show(adv[i], "adversarial_{}.png".format(i))
+            print("Noise:")
             show(adv[i] - inputs[i], "attack_diff.png")
 
-            print("Classification:", np.argsort(model.model.predict(adv[i:i+1]))[-1:-6:-1])
+            adv_predict = np.squeeze(model.model.predict(adv[i:i+1]))
+            print("Adversarial Classification:", np.argsort(adv_predict)[-1:-11:-1])
+            print("Adversarial Probabilities/Logits:", np.sort(adv_predict)[-1:-11:-1])
+
+            if targeted:
+                success = np.argsort(adv_predict)[-1] == np.argmax(targets[i])
+            else:
+                success = np.argsort(adv_predict)[-1] != np.argmax(targets[i])
+            if success:
+                print("Attack succeeded.")
+            else:
+                print("Attack failed.")
 
             print("Total distortion:", np.sum((adv[i]-inputs[i])**2)**.5)
+            print()
 
         # t = np.random.randn(28*28).reshape(1,28,28,1)
         # print(model.model.predict(t))

@@ -5,7 +5,7 @@ import time
 import keras.backend as K
 
 class FGSM:
-    def __init__(self, sess, model, targeted=True, batch_size=1):
+    def __init__(self, sess, model, use_log=True, targeted=True, batch_size=1):
         """
         The implementation of Ian Goodfellow's FGSM attack.
 
@@ -28,7 +28,7 @@ class FGSM:
         self.logits = self.model.predict(self.x)
         #Generate the gradient of the loss function.
         self.adv_loss = K.categorical_crossentropy(self.logits, self.y, from_logits=True)
-        if not targeted:
+        if targeted:
             self.adv_loss = -self.adv_loss
         #grad = K.gradients(self.adv_loss, x)
         self.grad = K.gradients(self.adv_loss, [self.x])[0]
