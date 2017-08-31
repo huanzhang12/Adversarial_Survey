@@ -126,14 +126,15 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
     data =  MNIST()
 
     print('Generate data')
-    X_train, Y_train, inputs, targets = generate_data(data, samples=9, targeted=targeted)
+    X_train, Y_train, inputs, targets = generate_data(data, samples=100, targeted=targeted)
 	# Redefine test set as remaining samples unavailable to adversaries
     
     x = tf.placeholder(tf.float32, shape=(None, 28, 28, 1))
     y = tf.placeholder(tf.float32, shape=(None, 10))
 
-	 # Define TF model graph
-    model = MNISTModel(use_log = use_log).model
+	 # Define TF model graph 
+    modelTop = MNISTModel(use_log = use_log)
+    model = modelTop.model
     preds = model(x)
     model_path = 'models_compare/mnist'
     ###########################################################################
@@ -162,41 +163,42 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
 
     print("Running cleverhans FGSM attack...")
     timestart = time.time()
-    attacker_params = {'eps': 0.3, 'ord': np.inf, 'clip_min': -0.5, 'clip_max': 0.5}
+    attacker_params = {'y_target': targets,'eps': 0.3, 'ord': np.inf, 'clip_min': -0.5, 'clip_max': 0.5}
     wrap = KerasModelWrapper(model) 
     cleverhans_fgsm = FastGradientMethod(wrap, back='tf',sess=sess)
-    x_adv1 = cleverhans_fgsm.generate(inputs, **attacker_params)
+    x_adv1 = cleverhans_fgsm.generate_np(inputs, **attacker_params)
     timeend = time.time()
-    print("Took",timeend-timestart,"seconds to run",len(adv_inputs),"samples.")
+    print("Took",timeend-timestart,"seconds to run",len(inputs),"samples.")
 	
 
     print("Running self FGSM attack...")
     timestart = time.time()
     epsilon = 0.3
-    self_fgsm = FGSM(sess, model, targeted=targeted, use_log=use_log, batch_size = 100)	
-    x_adv2 = self_fgsm.attack(adv_inputs, adv_ys, epsilon)
+    self_fgsm = FGSM(sess, modelTop, targeted=targeted, use_log=use_log, batch_size = 100)	
+    x_adv2 = self_fgsm.attack(inputs, targets, epsilon)
     timeend = time.time()
-    print("Took",timeend-timestart,"seconds to run",len(adv_inputs),"samples.")
+    print("Took",timeend-timestart,"seconds to run",len(inputs),"samples.")
     num = 0
     for i in range(len(x_adv2)):
-        adv_predict = np.squeeze(model(x_adv1[i:i+1]))
+        adv_predict = np.squeeze(model.predict(x_adv1[i:i+1]))
         if targeted:
-            success = np.argsort(adv_predict)[-1] == np.argmax(adv_ys[i])
+            success = np.argsort(adv_predict)[-1] == np.argmax(targets[i])
         else:
-            success = np.argsort(adv_predict)[-1] != np.argmax(adv_ys[i])
+            success = np.argsort(adv_predict)[-1] != np.argmax(targets[i])
         if success:
             num = num + 1
-        print('total number of success: ',num)
-        num1 = 0
+    print('total number of success: ',num)
+   
+    num1 = 0
     for i in range(len(x_adv2)):
-        adv_predict = np.squeeze(model(x_adv2[i:i+1]))
+        adv_predict = np.squeeze(model.predict(x_adv2[i:i+1]))
         if targeted:
-            success = np.argsort(adv_predict)[-1] == np.argmax(adv_ys[i])
+            success = np.argsort(adv_predict)[-1] == np.argmax(targets[i])
         else:
-            success = np.argsort(adv_predict)[-1] != np.argmax(adv_ys[i])
+            success = np.argsort(adv_predict)[-1] != np.argmax(targets[i])
         if success:
             num1 = num1 + 1
-        print('total number of success: ',num1)
+    print('total number of success: ',num1)
 
 def main(argv=None):
     mnist_compare(nb_classes=FLAGS.nb_classes, batch_size=FLAGS.batch_size,
