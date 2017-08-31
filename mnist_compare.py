@@ -126,9 +126,10 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
     data =  MNIST()
 
     print('Generate data')
-    X_train, Y_train, inputs, targets = generate_data(data, samples=100, targeted=targeted)
+    X_train, Y_train, inputs, targets = generate_data(data, samples=10, targeted=targeted)
 	# Redefine test set as remaining samples unavailable to adversaries
-    
+    print('training data shape: ', len(X_train), len(Y_train))
+    print('inputs shape: ', len(inputs), len(targets))
     x = tf.placeholder(tf.float32, shape=(None, 28, 28, 1))
     y = tf.placeholder(tf.float32, shape=(None, 10))
 
@@ -163,7 +164,7 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
 
     print("Running cleverhans FGSM attack...")
     timestart = time.time()
-    attacker_params = {'y_target': targets,'eps': 0.3, 'ord': np.inf, 'clip_min': -0.5, 'clip_max': 0.5}
+    attacker_params = {'eps': 0.3, 'ord': np.inf, 'clip_min': -0.5, 'clip_max': 0.5}
     wrap = KerasModelWrapper(model) 
     cleverhans_fgsm = FastGradientMethod(wrap, back='tf',sess=sess)
     x_adv1 = cleverhans_fgsm.generate_np(inputs, **attacker_params)
@@ -174,30 +175,62 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
     print("Running self FGSM attack...")
     timestart = time.time()
     epsilon = 0.3
-    self_fgsm = FGSM(sess, modelTop, targeted=targeted, use_log=use_log, batch_size = 100)	
+    self_fgsm = FGSM(sess, modelTop, targeted=targeted, use_log=use_log, batch_size = 10)	
     x_adv2 = self_fgsm.attack(inputs, targets, epsilon)
     timeend = time.time()
     print("Took",timeend-timestart,"seconds to run",len(inputs),"samples.")
     num = 0
     for i in range(len(x_adv2)):
+        print("Valid:")
+        show(inputs[i], "original_{}.png".format(i))
+        original_predict = np.squeeze(model.predict(inputs[i:i+1]))
+        print("Original Classification:", np.argsort(original_predict)[-1:-11:-1])
+        print("Original Probabilities/Logits:", np.sort(original_predict)[-1:-11:-1])
+        print("Target:", np.argmax(targets[i]))
+        print("Adversarial:")
+        show(x_adv1[i], "adversarial_{}.png".format(i))
+        print("Noise:")
+        show(x_adv1[i] - inputs[i], "attack_diff.png")
         adv_predict = np.squeeze(model.predict(x_adv1[i:i+1]))
+        print("Adversarial Classification:", np.argsort(adv_predict)[-1:-11:-1])
+        print("Adversarial Probabilities/Logits:", np.sort(adv_predict)[-1:-11:-1])
         if targeted:
             success = np.argsort(adv_predict)[-1] == np.argmax(targets[i])
         else:
             success = np.argsort(adv_predict)[-1] != np.argmax(targets[i])
         if success:
+            print("Attack succeeded.")
+        else:
+            print("Attack failed.")
+        if success:
             num = num + 1
+        print("Total distortion:", np.sum((x_adv1[i]-inputs[i])**2)**.5)
     print('total number of success: ',num)
    
     num1 = 0
     for i in range(len(x_adv2)):
-        adv_predict = np.squeeze(model.predict(x_adv2[i:i+1]))
+        print("Valid:")
+        show(inputs[i], "original_{}.png".format(i))
+        original_predict = np.squeeze(model.predict(inputs[i:i+1]))
+        print("Original Classification:", np.argsort(original_predict)[-1:-11:-1])
+        print("Original Probabilities/Logits:", np.sort(original_predict)[-1:-11:-1])
+        print("Target:", np.argmax(targets[i]))
+        print("Adversarial:")
+        show(x_adv2[i], "adversarial_{}.png".format(i))
+        print("Noise:")
+        show(x_adv2[i] - inputs[i], "attack_diff.png")
+        adv_predict2 = np.squeeze(model.predict(x_adv2[i:i+1]))
         if targeted:
-            success = np.argsort(adv_predict)[-1] == np.argmax(targets[i])
+            success = np.argsort(adv_predict2)[-1] == np.argmax(targets[i])
         else:
-            success = np.argsort(adv_predict)[-1] != np.argmax(targets[i])
+            success = np.argsort(adv_predict2)[-1] != np.argmax(targets[i])
+        if success:
+            print("Attack succeeded.")
+        else:
+            print("Attack failed.")
         if success:
             num1 = num1 + 1
+        print("Total distortion:", np.sum((x_adv2[i]-inputs[i])**2)**.5)
     print('total number of success: ',num1)
 
 def main(argv=None):
