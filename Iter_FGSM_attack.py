@@ -26,7 +26,7 @@ class Iter_FGSM:
         self.logits = self.model.predict(self.x)
         #Generate the gradient of the loss function.
         self.adv_loss = K.categorical_crossentropy(self.logits, self.y, from_logits=True)
-        if not targeted:
+        if targeted:
             self.adv_loss = -self.adv_loss
         #grad = K.gradients(self.adv_loss, x)
         self.grad = K.gradients(self.adv_loss, [self.x])[0]
