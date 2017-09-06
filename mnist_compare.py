@@ -137,7 +137,7 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
     modelTop = MNISTModel(use_log = use_log)
     model = modelTop.model
     preds = model(x)
-    model_path = 'models_compare/mnist'
+    model_path = 'modelsLog/mnist'
     ###########################################################################
     # Training the model using TensorFlow
     ###########################################################################
@@ -157,7 +157,7 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
         tf_model_load(sess, model_path)
     else:
         model_train(sess, x, y, preds, X_train, Y_train, args=train_params,
-                    save=os.path.exists("models"))
+                    save=os.path.exists("modelsLog"))
     print('done')
             
 	# Instantiate a fgsm attack object
@@ -183,7 +183,10 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
     for i in range(len(x_adv2)):
         print("Valid:")
         show(inputs[i], "original_{}.png".format(i))
-        original_predict = np.squeeze(model.predict(inputs[i:i+1]))
+        #original_predict = np.squeeze(model.predict(inputs[i:i+1]))
+        original_predict = sess.run(preds, feed_dict = {x : inputs[i:i+1]})
+        #print(original_predict)
+        original_predict = np.reshape(original_predict,(10,))
         print("Original Classification:", np.argsort(original_predict)[-1:-11:-1])
         print("Original Probabilities/Logits:", np.sort(original_predict)[-1:-11:-1])
         print("Target:", np.argmax(targets[i]))
@@ -191,19 +194,21 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
         show(x_adv1[i], "adversarial_{}.png".format(i))
         print("Noise:")
         show(x_adv1[i] - inputs[i], "attack_diff.png")
-        adv_predict = np.squeeze(model.predict(x_adv1[i:i+1]))
+        #adv_predict = np.squeeze(model.predict(x_adv1[i:i+1]))
+        adv_predict = sess.run(preds, feed_dict = {x : x_adv1[i:i+1]})
+        adv_predict = np.reshape(adv_predict,(10,))
         print("Adversarial Classification:", np.argsort(adv_predict)[-1:-11:-1])
         print("Adversarial Probabilities/Logits:", np.sort(adv_predict)[-1:-11:-1])
         if targeted:
             success = np.argsort(adv_predict)[-1] == np.argmax(targets[i])
         else:
             success = np.argsort(adv_predict)[-1] != np.argmax(targets[i])
+        print(success,np.argsort(adv_predict),np.argmax(targets[i]))
         if success:
             print("Attack succeeded.")
+            num = num + 1
         else:
             print("Attack failed.")
-        if success:
-            num = num + 1
         print("Total distortion:", np.sum((x_adv1[i]-inputs[i])**2)**.5)
     print('total number of success: ',num)
    
@@ -211,7 +216,9 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
     for i in range(len(x_adv2)):
         print("Valid:")
         show(inputs[i], "original_{}.png".format(i))
-        original_predict = np.squeeze(model.predict(inputs[i:i+1]))
+        #original_predict = np.squeeze(model.predict(inputs[i:i+1]))
+        original_predict = sess.run(preds, feed_dict = {x : inputs[i:i+1]})
+        original_predict = np.reshape(original_predict,(10,))
         print("Original Classification:", np.argsort(original_predict)[-1:-11:-1])
         print("Original Probabilities/Logits:", np.sort(original_predict)[-1:-11:-1])
         print("Target:", np.argmax(targets[i]))
@@ -219,7 +226,11 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
         show(x_adv2[i], "adversarial_{}.png".format(i))
         print("Noise:")
         show(x_adv2[i] - inputs[i], "attack_diff.png")
-        adv_predict2 = np.squeeze(model.predict(x_adv2[i:i+1]))
+        #adv_predict2 = np.squeeze(model.predict(x_adv2[i:i+1]))
+        adv_predict2 = sess.run(preds, feed_dict = {x : x_adv2[i:i+1]})
+        adv_predict2 = np.reshape(adv_predict2,(10,))
+        print("Adversarial Classification:", np.argsort(adv_predict2)[-1:-11:-1])
+        print("Adversarial Probabilities/Logits:", np.sort(adv_predict2)[-1:-11:-1])
         if targeted:
             success = np.argsort(adv_predict2)[-1] == np.argmax(targets[i])
         else:
@@ -234,38 +245,39 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
     print('total number of success: ',num1)
 
 def main(argv=None):
-    mnist_compare(nb_classes=FLAGS.nb_classes, batch_size=FLAGS.batch_size,
-                   learning_rate=FLAGS.learning_rate,
-                   nb_epochs=FLAGS.nb_epochs, holdout=FLAGS.holdout,
-                   data_aug=FLAGS.data_aug, nb_epochs_s=FLAGS.nb_epochs_s,
-                   lmbda=FLAGS.lmbda, attack=FLAGS.attack, targeted=FLAGS.targeted)
+    mnist_compare()
+#nb_classes=FLAGS.nb_classes, batch_size=FLAGS.batch_size,
+#                   learning_rate=FLAGS.learning_rate,
+#                   nb_epochs=FLAGS.nb_epochs, holdout=FLAGS.holdout,
+#                   data_aug=FLAGS.data_aug, nb_epochs_s=FLAGS.nb_epochs_s,
+#                   lmbda=FLAGS.lmbda, attack=FLAGS.attack, targeted=FLAGS.targeted)
 
 if __name__ == '__main__':
     # General flags
-    flags.DEFINE_integer('nb_classes', 10, 'Number of classes in problem')
-    flags.DEFINE_integer('batch_size', 128, 'Size of training batches')
-    flags.DEFINE_integer('n_attack', -1, 'No. of images used for attack')
-    flags.DEFINE_float('learning_rate', 0.001, 'Learning rate for training')
+    #flags.DEFINE_integer('nb_classes', 10, 'Number of classes in problem')
+    #flags.DEFINE_integer('batch_size', 128, 'Size of training batches')
+    #flags.DEFINE_integer('n_attack', -1, 'No. of images used for attack')
+    #flags.DEFINE_float('learning_rate', 0.001, 'Learning rate for training')
 
     # Flags related to oracle
-    flags.DEFINE_integer('nb_epochs', 10, 'Number of epochs to train model')
+    #flags.DEFINE_integer('nb_epochs', 10, 'Number of epochs to train model')
 
     # Flags related to substitute
-    flags.DEFINE_integer('holdout', 150, 'Test set holdout for adversary')
-    flags.DEFINE_integer('data_aug', 6, 'Nb of substitute data augmentations')
-    flags.DEFINE_integer('nb_epochs_s', 30, 'Training epochs for substitute')
-    flags.DEFINE_float('lmbda', 0.1, 'Lambda from arxiv.org/abs/1602.02697')
+    #flags.DEFINE_integer('holdout', 150, 'Test set holdout for adversary')
+    #flags.DEFINE_integer('data_aug', 6, 'Nb of substitute data augmentations')
+    #flags.DEFINE_integer('nb_epochs_s', 30, 'Training epochs for substitute')
+    #flags.DEFINE_float('lmbda', 0.1, 'Lambda from arxiv.org/abs/1602.02697')
 
     # Flags related to attack
-    flags.DEFINE_string('attack', 'cwl2', 'cwl2 = Carlini & Wagner\'s L2 attack, fgsm = Fast Gradient Sign Method')
-    flags.DEFINE_bool('targeted', False, 'use targeted attack')
+    #flags.DEFINE_string('attack', 'cwl2', 'cwl2 = Carlini & Wagner\'s L2 attack, fgsm = Fast Gradient Sign Method')
+    #flags.DEFINE_bool('targeted', False, 'use targeted attack')
 
     # Flags related to saving/loading
-    flags.DEFINE_bool('load_pretrain', False, 'load pretrained model from sub_saved/mnist-model')
-    flags.DEFINE_bool('cached_aug', False, 'use cached augmentation in sub_saved')
-    flags.DEFINE_string('train_dir', 'sub_saved', 'model saving path')
-    flags.DEFINE_string('filename', 'mnist-model', 'cifar model name')
+    #flags.DEFINE_bool('load_pretrain', False, 'load pretrained model from sub_saved/mnist-model')
+    #flags.DEFINE_bool('cached_aug', False, 'use cached augmentation in sub_saved')
+    #flags.DEFINE_string('train_dir', 'sub_saved', 'model saving path')
+    #flags.DEFINE_string('filename', 'mnist-model', 'cifar model name')
 
-    os.system("mkdir -p sub_saved")
+    #os.system("mkdir -p sub_saved")
 
     app.run()
