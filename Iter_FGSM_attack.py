@@ -2,7 +2,6 @@ import sys
 import tensorflow as tf
 import numpy as np
 import time
-import keras.backend as K
 
 class Iter_FGSM:
     def __init__(self, sess, model, targeted=True, batch_size=1):
