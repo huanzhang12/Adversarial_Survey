@@ -126,7 +126,7 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
     data =  MNIST()
 
     print('Generate data')
-    X_train, Y_train, inputs, targets = generate_data(data, samples=10, targeted=targeted)
+    X_train, Y_train, inputs, targets = generate_data(data, samples=1000, targeted=targeted)
 	# Redefine test set as remaining samples unavailable to adversaries
     print('training data shape: ', len(X_train), len(Y_train))
     print('inputs shape: ', len(inputs), len(targets))
@@ -175,44 +175,79 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
     print("Running self FGSM attack...")
     timestart = time.time()
     epsilon = 0.3
-    self_fgsm = FGSM(sess, modelTop, targeted=targeted, use_log=use_log, batch_size = 10)	
+    self_fgsm = FGSM(sess, modelTop, targeted=targeted, use_log=use_log, batch_size = 1000)	
     x_adv2 = self_fgsm.attack(inputs, targets, epsilon)
     timeend = time.time()
     print("Took",timeend-timestart,"seconds to run",len(inputs),"samples.")
     num = 0
+    num1 = 0
+# for i in range(len(x_adv2)):
+        #print('picture',i)
+        #a = np.sum(x_adv1 - x_adv2,axis = 0)
+        #print(x_adv1[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-6])
+        #print(x_adv2[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-6])       
+        #print(inputs[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-6]) 
     for i in range(len(x_adv2)):
-        print("Valid:")
-        show(inputs[i], "original_{}.png".format(i))
+        #print("Valid:")
+        #show(inputs[i], "original_{}.png".format(i))
         #original_predict = np.squeeze(model.predict(inputs[i:i+1]))
         original_predict = sess.run(preds, feed_dict = {x : inputs[i:i+1]})
         #print(original_predict)
         original_predict = np.reshape(original_predict,(10,))
-        print("Original Classification:", np.argsort(original_predict)[-1:-11:-1])
-        print("Original Probabilities/Logits:", np.sort(original_predict)[-1:-11:-1])
-        print("Target:", np.argmax(targets[i]))
-        print("Adversarial:")
-        show(x_adv1[i], "adversarial_{}.png".format(i))
-        print("Noise:")
-        show(x_adv1[i] - inputs[i], "attack_diff.png")
+        if np.argsort(original_predict)[-1] != np.argmax(targets[i]):
+            #print('true label id different with predict label. Skip this')
+            continue
+        #print(np.argsort(original_predict)[-1])
+        #print(np.argmax(targets[i]))
+        #if original_predict !=        
+        #print("Original Classification:", np.argsort(original_predict)[-1:-11:-1])
+        #print("Original Probabilities/Logits:", np.sort(original_predict)[-1:-11:-1])
+        #print("Target:", np.argmax(targets[i]))
+        #print("Adversarial:")
+        #show(x_adv1[i], "adversarial_{}.png".format(i))
+        #print("Noise:")
+        #show(x_adv1[i] - inputs[i], "attack_diff.png")
         #adv_predict = np.squeeze(model.predict(x_adv1[i:i+1]))
-        adv_predict = sess.run(preds, feed_dict = {x : x_adv1[i:i+1]})
-        adv_predict = np.reshape(adv_predict,(10,))
-        print("Adversarial Classification:", np.argsort(adv_predict)[-1:-11:-1])
-        print("Adversarial Probabilities/Logits:", np.sort(adv_predict)[-1:-11:-1])
+        adv_predict_cleverhans = sess.run(preds, feed_dict = {x : x_adv1[i:i+1]})
+        adv_predict_me = sess.run(preds, feed_dict = {x : x_adv2[i:i+1]})
+        adv_predict_cleverhans = np.reshape(adv_predict_cleverhans,(10,))
+        adv_predict_me = np.reshape(adv_predict_me,(10,))
+        #print("Adversarial Classification in cleverhans:", np.argsort(adv_predict_cleverhans)[-1:-11:-1])
+        #print("Adversarial Probabilities/Logits in cleverhans:", np.sort(adv_predict_cleverhans)[-1:-11:-1])
+        #print("Adversarial Classification in me:", np.argsort(adv_predict_me)[-1:-11:-1])
+        #print("Adversarial Probabilities/Logits in me:", np.sort(adv_predict_me)[-1:-11:-1])
         if targeted:
             success = np.argsort(adv_predict)[-1] == np.argmax(targets[i])
         else:
-            success = np.argsort(adv_predict)[-1] != np.argmax(targets[i])
-        print(success,np.argsort(adv_predict),np.argmax(targets[i]))
-        if success:
-            print("Attack succeeded.")
+            success_cleverhans = np.argsort(adv_predict_cleverhans)[-1] != np.argmax(targets[i])
+            success_me = np.argsort(adv_predict_me)[-1] != np.argmax(targets[i])  
+        if success_cleverhans:
+            #print("Attack succeeded.")
             num = num + 1
-        else:
-            print("Attack failed.")
-        print("Total distortion:", np.sum((x_adv1[i]-inputs[i])**2)**.5)
-    print('total number of success: ',num)
-   
-    num1 = 0
+        #else:
+        #    print("Attack failed.")
+        if success_me:
+            num1 = num1 + 1
+        if success_cleverhans != success_me:
+            print()
+            print()
+            print("Original Classification:", np.argsort(original_predict)[-1:-11:-1])
+            print("Original Probabilities/Logits:", np.sort(original_predict)[-1:-11:-1])
+            print('original label:', targets[i])
+            print('cleverhans:',success_cleverhans)
+            print('me:', success_me)
+            print("Adversarial Classification in cleverhans:", np.argsort(adv_predict_cleverhans)[-1:-11:-1])
+            print("Adversarial Probabilities/Logits in cleverhans:", np.sort(adv_predict_cleverhans)[-1:-11:-1])
+            print("Adversarial Classification in me:", np.argsort(adv_predict_me)[-1:-11:-1])
+            print("Adversarial Probabilities/Logits in me:", np.sort(adv_predict_me)[-1:-11:-1])
+            #a = np.sum(x_adv1 - x_adv2,axis = 0)
+            print(x_adv1[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10])
+            print(x_adv2[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10])       
+            print(inputs[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10]) 
+#print("Total distortion:", np.sum((x_adv1[i]-inputs[i])**2)**.5)
+    print('total number of success in cleverhans: ',num)
+    print('total number of success in me: ',num1)
+""" num1 = 0
     for i in range(len(x_adv2)):
         print("Valid:")
         show(inputs[i], "original_{}.png".format(i))
@@ -243,7 +278,7 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
             num1 = num1 + 1
         print("Total distortion:", np.sum((x_adv2[i]-inputs[i])**2)**.5)
     print('total number of success: ',num1)
-
+"""
 def main(argv=None):
     mnist_compare()
 #nb_classes=FLAGS.nb_classes, batch_size=FLAGS.batch_size,
