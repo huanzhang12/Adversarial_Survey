@@ -4,8 +4,10 @@ import numpy as np
 import time
 import keras.backend as K
 
+from inspect import signature
+
 class FGSM:
-    def __init__(self, sess, model, use_log=True, targeted=True, batch_size=1):
+    def __init__(self, sess, model, use_log=True, targeted=True, batch_size=1, epsilon=0.3):
         """
         The implementation of Ian Goodfellow's FGSM attack.
 
@@ -15,10 +17,16 @@ class FGSM:
         default is targeted.
         """
 
+        if use_log == False:
+            print("use_log should be set to True for FGSM attack")
+            #throw an exception
+            return
+
         image_size, num_channels, num_labels = model.image_size, model.num_channels, model.num_labels
         self.sess = sess
         self.model = model
-        self.epsilon = tf.placeholder(tf.float32)
+        #self.epsilon = tf.placeholder(tf.float32)
+        self.epsilon = epsilon
         self.batch_size = batch_size
 
         shape = (batch_size,image_size,image_size,num_channels)
@@ -46,7 +54,7 @@ class FGSM:
 
         return
 
-    def attack(self, imgs, targets, epsilon):
+    def attack(self, imgs, targets):
         """
         Perform the one-shot L_infinity FGSM attack on the given images for the given targets.
 
@@ -54,11 +62,16 @@ class FGSM:
         If self.targeted is false, then targets are the original class labels.
         """
 
-        print("Perofming FGSM attack")
+        adv_x_concrete, adv_x_grad = self.sess.run([self.adv_x, self.grad], feed_dict={self.x: imgs,
+                                                                                        self.y: targets})
 
-        adv_x_concrete = self.sess.run(self.adv_x, feed_dict={self.x: imgs,
-                                                               self.y: targets,
-                                                               self.epsilon: epsilon})
-        print("Done on the FGSM attack")
+        return adv_x_concrete, adv_x_grad
 
-        return adv_x_concrete
+    """
+    A dummy wrapper for the FGSM attack.  Just for invoked by test_FGSM.py (based on test_all.py)
+    """
+    def attack_batch(self, imgs, targets):
+
+        adv_x_concrete, adv_x_grad = self.attack(imgs, targets)
+
+        return adv_x_concrete, adv_x_grad
