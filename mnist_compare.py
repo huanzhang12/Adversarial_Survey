@@ -7,25 +7,15 @@ import os
 import logging
 import time
 import numpy as np
-from six.moves import xrange
 
-import keras
-from keras import backend
-from six.moves import xrange
-from keras.utils.np_utils import to_categorical
-from keras.models import Sequential
-from keras.layers import Dense, Flatten, Activation, Dropout
 
 import tensorflow as tf
 from tensorflow.python.platform import app
 from tensorflow.python.platform import flags
 
-from cleverhans.utils_keras import cnn_model
-from cleverhans.utils_mnist import data_mnist
 from cleverhans.utils_tf import model_train, model_eval, batch_eval, tf_model_load
 from cleverhans.attacks import CarliniWagnerL2
 from cleverhans.attacks import FastGradientMethod
-from cleverhans.attacks_tf import jacobian_graph, jacobian_augmentation
 from cleverhans.utils_keras import KerasModelWrapper
 from setup_mnist import MNIST, MNISTModel
 from setup_mnist import MNISTModel
@@ -108,6 +98,7 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
 
     #report = AccuracyReport()
     use_log = True
+    targeted = False
     # MNIST-specific dimensions
     img_rows = 28
     img_cols = 28
@@ -126,7 +117,7 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
     data =  MNIST()
 
     print('Generate data')
-    X_train, Y_train, inputs, targets = generate_data(data, samples=1000, targeted=targeted)
+    X_train, Y_train, inputs, targets = generate_data(data, samples=10, targeted=targeted)
 	# Redefine test set as remaining samples unavailable to adversaries
     print('training data shape: ', len(X_train), len(Y_train))
     print('inputs shape: ', len(inputs), len(targets))
@@ -164,10 +155,15 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
 
     print("Running cleverhans FGSM attack...")
     timestart = time.time()
-    attacker_params = {'eps': 0.3, 'ord': np.inf, 'clip_min': -0.5, 'clip_max': 0.5}
+    if targeted:
+        attacker_params = {'eps': 0.3, 'y_target': targets, 'ord': np.inf, 'clip_min': -0.5, 'clip_max': 0.5}
+    else:
+        attacker_params = {'eps': 0.3,  'ord': np.inf, 'clip_min': -0.5, 'clip_max': 0.5}
     wrap = KerasModelWrapper(model) 
     cleverhans_fgsm = FastGradientMethod(wrap, back='tf',sess=sess)
-    x_adv1 = cleverhans_fgsm.generate_np(inputs, **attacker_params)
+    #x_adv1 = cleverhans_fgsm.generate_np(inputs, **attacker_params)
+    x_adv = cleverhans_fgsm.generate(x, **attacker_params)
+    x_adv1 = sess.run(x_adv, feed_dict = {x : inputs})
     timeend = time.time()
     print("Took",timeend-timestart,"seconds to run",len(inputs),"samples.")
 	
@@ -175,8 +171,8 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
     print("Running self FGSM attack...")
     timestart = time.time()
     epsilon = 0.3
-    self_fgsm = FGSM(sess, modelTop, targeted=targeted, use_log=use_log, batch_size = 1000)	
-    x_adv2 = self_fgsm.attack(inputs, targets, epsilon)
+    self_fgsm = FGSM(sess, modelTop, eps = epsilon,targeted=targeted, use_log=use_log, batch_size = 10)	
+    x_adv2 = self_fgsm.attack(inputs, targets)
     timeend = time.time()
     print("Took",timeend-timestart,"seconds to run",len(inputs),"samples.")
     num = 0
@@ -194,9 +190,9 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
         original_predict = sess.run(preds, feed_dict = {x : inputs[i:i+1]})
         #print(original_predict)
         original_predict = np.reshape(original_predict,(10,))
-        if np.argsort(original_predict)[-1] != np.argmax(targets[i]):
-            #print('true label id different with predict label. Skip this')
-            continue
+        if targeted:
+            if np.argsort(original_predict)[-1] != np.argmax(targets[i]):
+                continue
         #print(np.argsort(original_predict)[-1])
         #print(np.argmax(targets[i]))
         #if original_predict !=        
@@ -216,8 +212,16 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
         #print("Adversarial Probabilities/Logits in cleverhans:", np.sort(adv_predict_cleverhans)[-1:-11:-1])
         #print("Adversarial Classification in me:", np.argsort(adv_predict_me)[-1:-11:-1])
         #print("Adversarial Probabilities/Logits in me:", np.sort(adv_predict_me)[-1:-11:-1])
+        print(x_adv1[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10])
+        print(x_adv2[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10])
+        #print(inputs[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10])
+        #print(logits1[i][np.abs(logits1[i] - logits2[i]) > 1e-10])
+        #print(logits2[i][np.abs(logits1[i] - logits2[i]) > 1e-10])
+        #print('self.loss: ',np.sum(logits1[i] - logits2[i]))
         if targeted:
-            success = np.argsort(adv_predict)[-1] == np.argmax(targets[i])
+            #success = np.argsort(adv_predict)[-1] == np.argmax(targets[i])
+            success_cleverhans = np.argsort(adv_predict_cleverhans)[-1] == np.argmax(targets[i])
+            success_me = np.argsort(adv_predict_me)[-1] == np.argmax(targets[i])
         else:
             success_cleverhans = np.argsort(adv_predict_cleverhans)[-1] != np.argmax(targets[i])
             success_me = np.argsort(adv_predict_me)[-1] != np.argmax(targets[i])  
@@ -228,57 +232,10 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
         #    print("Attack failed.")
         if success_me:
             num1 = num1 + 1
-        if success_cleverhans != success_me:
-            print()
-            print()
-            print("Original Classification:", np.argsort(original_predict)[-1:-11:-1])
-            print("Original Probabilities/Logits:", np.sort(original_predict)[-1:-11:-1])
-            print('original label:', targets[i])
-            print('cleverhans:',success_cleverhans)
-            print('me:', success_me)
-            print("Adversarial Classification in cleverhans:", np.argsort(adv_predict_cleverhans)[-1:-11:-1])
-            print("Adversarial Probabilities/Logits in cleverhans:", np.sort(adv_predict_cleverhans)[-1:-11:-1])
-            print("Adversarial Classification in me:", np.argsort(adv_predict_me)[-1:-11:-1])
-            print("Adversarial Probabilities/Logits in me:", np.sort(adv_predict_me)[-1:-11:-1])
-            #a = np.sum(x_adv1 - x_adv2,axis = 0)
-            print(x_adv1[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10])
-            print(x_adv2[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10])       
-            print(inputs[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10]) 
-#print("Total distortion:", np.sum((x_adv1[i]-inputs[i])**2)**.5)
+    print("Total distortion:", np.sum((x_adv1[i]-inputs[i])**2)**.5)
     print('total number of success in cleverhans: ',num)
     print('total number of success in me: ',num1)
-""" num1 = 0
-    for i in range(len(x_adv2)):
-        print("Valid:")
-        show(inputs[i], "original_{}.png".format(i))
-        #original_predict = np.squeeze(model.predict(inputs[i:i+1]))
-        original_predict = sess.run(preds, feed_dict = {x : inputs[i:i+1]})
-        original_predict = np.reshape(original_predict,(10,))
-        print("Original Classification:", np.argsort(original_predict)[-1:-11:-1])
-        print("Original Probabilities/Logits:", np.sort(original_predict)[-1:-11:-1])
-        print("Target:", np.argmax(targets[i]))
-        print("Adversarial:")
-        show(x_adv2[i], "adversarial_{}.png".format(i))
-        print("Noise:")
-        show(x_adv2[i] - inputs[i], "attack_diff.png")
-        #adv_predict2 = np.squeeze(model.predict(x_adv2[i:i+1]))
-        adv_predict2 = sess.run(preds, feed_dict = {x : x_adv2[i:i+1]})
-        adv_predict2 = np.reshape(adv_predict2,(10,))
-        print("Adversarial Classification:", np.argsort(adv_predict2)[-1:-11:-1])
-        print("Adversarial Probabilities/Logits:", np.sort(adv_predict2)[-1:-11:-1])
-        if targeted:
-            success = np.argsort(adv_predict2)[-1] == np.argmax(targets[i])
-        else:
-            success = np.argsort(adv_predict2)[-1] != np.argmax(targets[i])
-        if success:
-            print("Attack succeeded.")
-        else:
-            print("Attack failed.")
-        if success:
-            num1 = num1 + 1
-        print("Total distortion:", np.sum((x_adv2[i]-inputs[i])**2)**.5)
-    print('total number of success: ',num1)
-"""
+
 def main(argv=None):
     mnist_compare()
 #nb_classes=FLAGS.nb_classes, batch_size=FLAGS.batch_size,
