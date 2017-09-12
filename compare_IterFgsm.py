@@ -14,14 +14,14 @@ from tensorflow.python.platform import app
 from tensorflow.python.platform import flags
 
 from cleverhans.utils_tf import model_train, model_eval, batch_eval, tf_model_load
-from cleverhans.attacks import CarliniWagnerL2
-from cleverhans.attacks import FastGradientMethod
+
 from cleverhans.utils_keras import KerasModelWrapper
 from setup_mnist import MNIST, MNISTModel
-from setup_mnist import MNISTModel
+#from setup_mnist import MNISTModel
 from FGSM_attack import FGSM
 FLAGS = flags.FLAGS
-
+from Iter_FGSM_attack import Iter_FGSM
+from cleverhans.attacks import BasicIterativeMethod
 
 from PIL import Image
 
@@ -98,7 +98,7 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
 
     #report = AccuracyReport()
     use_log = True
-    targeted = False
+    targeted = True
     # MNIST-specific dimensions
     img_rows = 28
     img_cols = 28
@@ -153,36 +153,31 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
             
 	# Instantiate a fgsm attack object
 
-    print("Running cleverhans FGSM attack...")
+    print("Running cleverhans iter_FGSM attack...")
     timestart = time.time()
     if targeted:
-        attacker_params = {'eps': 0.3, 'y_target': targets, 'ord': np.inf, 'clip_min': -0.5, 'clip_max': 0.5}
+        attacker_params = {'eps': 0.3, 'y_target':targets,'eps_iter': 0.3, 'nb_iter':20, 'clip_min': -0.5, 'clip_max': 0.5}
     else:
-        attacker_params = {'eps': 0.3,  'ord': np.inf, 'clip_min': -0.5, 'clip_max': 0.5}
+        attacker_params= {'eps': 0.3, 'eps_iter': 0.3, 'nb_iter':20, 'clip_min': -0.5, 'clip_max': 0.5}
     wrap = KerasModelWrapper(model) 
-    cleverhans_fgsm = FastGradientMethod(wrap, back='tf',sess=sess)
-    #x_adv1 = cleverhans_fgsm.generate_np(inputs, **attacker_params)
-    x_adv = cleverhans_fgsm.generate(x, **attacker_params)
+    cleverhans_iter_fgsm = BasicIterativeMethod(wrap, back='tf',sess=sess)
+    x_adv = cleverhans_iter_fgsm.generate(x, **attacker_params)
     x_adv1 = sess.run(x_adv, feed_dict = {x : inputs})
     timeend = time.time()
     print("Took",timeend-timestart,"seconds to run",len(inputs),"samples.")
 	
 
-    print("Running self FGSM attack...")
+    print("Running self iter_FGSM attack...")
     timestart = time.time()
-    epsilon = 0.3
-    self_fgsm = FGSM(sess, modelTop, eps = epsilon,targeted=targeted, use_log=use_log, batch_size = 10)	
-    x_adv2 = self_fgsm.attack(inputs, targets)
+    eps_iter = 0.3
+    steps = 20
+    eps = 0.3
+    self_iter_fgsm = Iter_FGSM(sess, modelTop, eps = eps, eps_iter = eps_iter, iter_num = steps, targeted=targeted, batch_size = 90)
+    x_adv2 = self_iter_fgsm.attack(inputs, targets)
     timeend = time.time()
     print("Took",timeend-timestart,"seconds to run",len(inputs),"samples.")
     num = 0
     num1 = 0
-# for i in range(len(x_adv2)):
-        #print('picture',i)
-        #a = np.sum(x_adv1 - x_adv2,axis = 0)
-        #print(x_adv1[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-6])
-        #print(x_adv2[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-6])       
-        #print(inputs[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-6]) 
     for i in range(len(x_adv2)):
         #print("Valid:")
         #show(inputs[i], "original_{}.png".format(i))
@@ -190,8 +185,9 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
         original_predict = sess.run(preds, feed_dict = {x : inputs[i:i+1]})
         #print(original_predict)
         original_predict = np.reshape(original_predict,(10,))
-        if targeted:
+        if not targeted:
             if np.argsort(original_predict)[-1] != np.argmax(targets[i]):
+            #print('true label id different with predict label. Skip this')
                 continue
         #print(np.argsort(original_predict)[-1])
         #print(np.argmax(targets[i]))
@@ -214,17 +210,13 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
         #print("Adversarial Probabilities/Logits in me:", np.sort(adv_predict_me)[-1:-11:-1])
         print(x_adv1[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10])
         print(x_adv2[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10])
-        #print(inputs[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10])
-        #print(logits1[i][np.abs(logits1[i] - logits2[i]) > 1e-10])
-        #print(logits2[i][np.abs(logits1[i] - logits2[i]) > 1e-10])
-        #print('self.loss: ',np.sum(logits1[i] - logits2[i]))
+        print(inputs[i][np.abs(x_adv1[i] - x_adv2[i]) > 1e-10])
         if targeted:
-            #success = np.argsort(adv_predict)[-1] == np.argmax(targets[i])
             success_cleverhans = np.argsort(adv_predict_cleverhans)[-1] == np.argmax(targets[i])
             success_me = np.argsort(adv_predict_me)[-1] == np.argmax(targets[i])
         else:
             success_cleverhans = np.argsort(adv_predict_cleverhans)[-1] != np.argmax(targets[i])
-            success_me = np.argsort(adv_predict_me)[-1] != np.argmax(targets[i])  
+            success_me = np.argsort(adv_predict_me)[-1] != np.argmax(targets[i])
         if success_cleverhans:
             #print("Attack succeeded.")
             num = num + 1
@@ -232,17 +224,12 @@ def mnist_compare(train_start=0, train_end=60000, test_start=0,
         #    print("Attack failed.")
         if success_me:
             num1 = num1 + 1
-    print("Total distortion:", np.sum((x_adv1[i]-inputs[i])**2)**.5)
     print('total number of success in cleverhans: ',num)
     print('total number of success in me: ',num1)
 
 def main(argv=None):
     mnist_compare()
-#nb_classes=FLAGS.nb_classes, batch_size=FLAGS.batch_size,
-#                   learning_rate=FLAGS.learning_rate,
-#                   nb_epochs=FLAGS.nb_epochs, holdout=FLAGS.holdout,
-#                   data_aug=FLAGS.data_aug, nb_epochs_s=FLAGS.nb_epochs_s,
-#                   lmbda=FLAGS.lmbda, attack=FLAGS.attack, targeted=FLAGS.targeted)
+
 
 if __name__ == '__main__':
     # General flags
