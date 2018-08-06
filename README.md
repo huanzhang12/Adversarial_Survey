@@ -73,7 +73,7 @@ Several global parameters:
 
 `--untargeted`: For running untargeted attacks.  For running targeted attacks, do not add this option in the command. 
 
-`--target_type`: For running targeted attacks, you can specify the target type: least likely target (type: `0b0100`), top2 likely (type: 0b0001) or random target (type: 0b0010).  In the above examples, we run targeted attack over all of these three target types and use `0b0111` which is 7 as the `target_type`. 
+`--target_type`: For running targeted attacks, you can specify the target type: least likely target (type: `0b0100`), top2 likely (type: `0b0001`) or random target (type: `0b0010`).  In the above examples, we run targeted attack over all of these three target types and use `0b0111` which is 7 as the `target_type`. 
 
 `--seed`: For setting the random seed. 
 
