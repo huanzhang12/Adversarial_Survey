@@ -14,15 +14,16 @@ by Dong Su\*, Huan Zhang\*, Hongge Chen, Jinfeng Yi, Pin-Yu Chen, Yupeng Gao
 Experiment Setup
 -------------------------------------
 
-The code is tested with python3 and TensorFlow v1.8. 
+The code is tested with python 3.6.5 and TensorFlow v1.8. 
 
 To prepare the ImageNet dataset, download and unzip the following archive:
 
 [ImageNet Test Set](http://jaina.cs.ucdavis.edu/datasets/adv/imagenet/img.tar.gz)
 
-and put the imgs folder in ../imagenetdata, relative to the Adversarial_Survey repository. This path can be changed in setup_imagenet.py.
+and put the `imgs` folder in `Adversarial_Survey/imagenetdata` directory, relative to the Adversarial_Survey repository. This path can be changed in `setup_imagenet.py`.
 
 To prepare the ImageNet models:
+In the Adversarial_Survey directory, run
 ```
 python setup_imagenet.py
 ```
@@ -45,7 +46,7 @@ python test_IterFGSM.py --dataset=imagenet --attack=IterFGSM --num_valid_test_im
 
 One can also run IFGSM targeted attack with fixed attack budget , 
 ```
-python test_IterFGSM.py --dataset=imagenet --attack=IterFGSM --num_valid_test_imgs=10 --attack_batch_size=1 --model_name=alexnet --numimg=0 --firstimg=0 --save=./saved_results/IterFGSM/epsilon_0.2_iterations_50_imagenet_IterFGSM_targeted_densenet169_k32 --initial_eps=0.2 --max_attempts=1 --iter_num=50 --target_type=7 --use_zvalue --seed=1215
+python test_IterFGSM.py --dataset=imagenet --attack=IterFGSM --num_valid_test_imgs=10 --attack_batch_size=1 --model_name=densenet169_k32 --numimg=0 --firstimg=0 --save=./saved_results/IterFGSM/epsilon_0.2_iterations_50_imagenet_IterFGSM_targeted_densenet169_k32 --initial_eps=0.2 --max_attempts=1 --iter_num=50 --target_type=7 --use_zvalue --seed=1215
 ```
 
 To run the CW targeted attack on the densenet169_k32 model
@@ -58,12 +59,13 @@ To run the EADL1 targeted attack on the densenet169_k32 model
 python test_CW_EADL1.py --dataset=imagenet --attack=EADL1 --numimg=0 --firstimg=0 --num_valid_test_imgs=10 --save=./saved_results/EADL1/kappa_0_imagenet_EADL1_targeted_densenet161_k48 --maxiter=1000 --lr=0.001 --binary_steps=9 --init_const=0.01 --use_zvalue --target_type=7 --kappa=0 --model_name=densenet169_k32 --attack_batch_size=1 --seed=1215 
 ```
 
-To run the transferability untargeted attack to the given target model, e.g. densenet161_k48, from the generated untargeted adversarial example from the model densenet169_k32
+To run the untargeted transferability attack to the given target model, e.g. densenet161_k48, from the generated untargeted adversarial examples from the model densenet169_k32
 ```
 python test_transferability.py --dataset=imagenet --attack=FGSM --epsilon=0.3 --src_adv_sample_path=./saved_results/FGSM/densenet169_k32_eps_0.3_untargeted/imagenet/FGSM/targeted_False --save=./saved_results/transferability/FGSM/epsilon_0.3_imagenet_FGSM_untargeted_densenet169_k32_densenet161_k48/ --use_zvalue --src_model_name=densenet169_k32 --target_model_name=densenet161_k48 --untargeted
 ```
 
-Global settings:
+Several global parameters:
+
 `--model_name`: it can be one from the supported 18 ImageNet model list: 
 ```
 ['resnet_v2_50','resnet_v2_101','resnet_v2_152','inception_v1','inception_v2','inception_v3','inception_v4', 'inception_resnet_v2','vgg_16','vgg_19','mobilenet_v1_025','mobilenet_v1_050','mobilenet_v1_100', 'densenet121_k32', 'densenet169_k32', 'densenet161_k48', 'nasnet_large', 'alexnet']
