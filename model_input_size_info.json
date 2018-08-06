@@ -1,0 +1,20 @@
+{
+	"resnet_v2_50": 299,
+	"resnet_v2_101": 299,
+	"resnet_v2_152": 299,
+	"inception_v1": 224,
+	"inception_v2": 224,
+	"inception_v3": 299,
+	"inception_v4": 299,
+	"inception_resnet_v2": 299,
+	"vgg_16": 224,
+	"vgg_19": 224,
+	"mobilenet_v1_025": 224,
+	"mobilenet_v1_050": 224,
+	"mobilenet_v1_100": 224,
+	"nasnet_large": 331,
+	"alexnet": 227,
+	"densenet121_k32": 224,
+	"densenet169_k32": 224,
+	"densenet161_k48": 224
+}
