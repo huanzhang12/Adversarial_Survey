@@ -7,6 +7,7 @@ For more details, please see our paper:
 
 [Is Robustness the Cost of Accuracy? – A Comprehensive Study on the Robustness of 18 Deep Image Classification Models]
 by Dong Su\*, Huan Zhang\*, Hongge Chen, Jinfeng Yi, Pin-Yu Chen, Yupeng Gao.  To appear in ECCV 2018. 
+(https://arxiv.org/abs/1808.01688) by Dong Su\*, Huan Zhang\*, Hongge Chen, Jinfeng Yi, Pin-Yu Chen, Yupeng Gao, ECCV 2018. 
 
 \* Equal contribution
 
@@ -14,13 +15,26 @@ by Dong Su\*, Huan Zhang\*, Hongge Chen, Jinfeng Yi, Pin-Yu Chen, Yupeng Gao.  T
 Experiment Setup
 -------------------------------------
 
-The code is tested with python 3.6.5 and TensorFlow v1.8. 
+The code is tested with python 3.6.5 and TensorFlow v1.8. We suggest to use Conda to manage your Python environments. The following Conda packages are required:
+
+```
+conda install pillow numpy scipy pandas tensorflow-gpu h5py
+grep 'AMD' /proc/cpuinfo >/dev/null && conda install nomkl
+```
+Note: the second command is only needed in the linux environment.  
+
+
+Then clone this repository:
+```
+git clone git@github.com:huanzhang12/Adversarial_Survey.git
+cd Adversarial_Survey
+```
 
 To prepare the ImageNet dataset, download and unzip the following archive:
 
 [ImageNet Test Set](http://jaina.cs.ucdavis.edu/datasets/adv/imagenet/img.tar.gz)
 
-and put the `imgs` folder in `Adversarial_Survey/imagenetdata` directory, relative to the Adversarial_Survey repository. This path can be changed in `setup_imagenet.py`.
+and put the `imgs` folder in `./imagenetdata` directory, relative to the Adversarial_Survey repository. This path can be changed in `setup_imagenet.py`.
 
 To prepare the ImageNet models:
 In the Adversarial_Survey directory, run
@@ -73,7 +87,7 @@ Several global parameters:
 
 `--untargeted`: For running untargeted attacks.  For running targeted attacks, do not add this option in the command. 
 
-`--target_type`: For running targeted attacks, you can specify the target type: least likely target (type: `0b0100`), top2 likely (type: 0b0001) or random target (type: 0b0010).  In the above examples, we run targeted attack over all of these three target types and use `0b0111` which is 7 as the `target_type`. 
+`--target_type`: For running targeted attacks, you can specify the target type: least likely target (type: `0b0100`), top2 likely (type: `0b0001`) or random target (type: `0b0010`).  In the above examples, we run targeted attack over all of these three target types and use `0b0111` which is 7 as the `target_type`. 
 
 `--seed`: For setting the random seed. 
 
