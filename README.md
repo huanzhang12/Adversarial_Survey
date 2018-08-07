@@ -34,14 +34,14 @@ To prepare the ImageNet dataset, download and unzip the following archive:
 
 [ImageNet Test Set](http://jaina.cs.ucdavis.edu/datasets/adv/imagenet/img.tar.gz)
 
-and put the `imgs` folder in `./imagenetdata` directory, relative to the Adversarial_Survey repository. This path can be changed in `setup_imagenet.py`.
+create the `./imagenetdata` directory, and put the `imgs` folder under the `./imagenetdata` directory, relative to the Adversarial_Survey repository. This path can be changed in `setup_imagenet.py`.
 
 To prepare the ImageNet models:
-In the Adversarial_Survey directory, run
+Create the `./tmp/` directory.  In the Adversarial_Survey directory, run
 ```
 python setup_imagenet.py
 ```
-All pretrained model will be saved to `tmp/imagenet` directory.
+All pretrained model will be saved to `./tmp/imagenet` directory.
 
 
 Run the experiment
