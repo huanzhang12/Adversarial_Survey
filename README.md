@@ -5,9 +5,8 @@ The prediction accuracy has been the long-lasting and sole standard for comparin
 
 For more details, please see our paper:
 
-[Is Robustness the Cost of Accuracy? – A Comprehensive Study on the Robustness of 18 Deep Image Classification Models]
-by Dong Su\*, Huan Zhang\*, Hongge Chen, Jinfeng Yi, Pin-Yu Chen, Yupeng Gao.  To appear in ECCV 2018. 
-(https://arxiv.org/abs/1808.01688) by Dong Su\*, Huan Zhang\*, Hongge Chen, Jinfeng Yi, Pin-Yu Chen, Yupeng Gao, ECCV 2018. 
+Is Robustness the Cost of Accuracy? – A Comprehensive Study on the Robustness of 18 Deep Image Classification Models. 
+(https://arxiv.org/abs/1808.01688) by Dong Su\*, Huan Zhang\*, Hongge Chen, Jinfeng Yi, Pin-Yu Chen, Yupeng Gao. European Conference on Computer Vision (ECCV), 2018. 
 
 \* Equal contribution
 
