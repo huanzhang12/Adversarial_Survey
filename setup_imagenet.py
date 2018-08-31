@@ -437,7 +437,7 @@ def readimg(ff, img_size):
   img = Image.open(f)
   transformed_img = keep_aspect_ratio_transform(img, img_size)
 
-  img = np.array(transformed_img)/255.0-.5
+  img = np.array(transformed_img, dtype=np.float32)/255.0-.5
   if img.shape != (img_size, img_size, 3):
     return None
   return [img, int(ff.split(".")[0])]
