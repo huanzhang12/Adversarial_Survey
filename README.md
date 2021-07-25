@@ -31,7 +31,7 @@ cd Adversarial_Survey
 
 To prepare the ImageNet dataset, download and unzip the following archive:
 
-[ImageNet Test Set](http://jaina.cs.ucdavis.edu/datasets/adv/imagenet/img.tar.gz)
+http://download.huan-zhang.com/datasets/adv/img.tar.gz
 
 create the `./imagenetdata` directory, and put the `imgs` folder under the `./imagenetdata` directory, relative to the Adversarial_Survey repository. This path can be changed in `setup_imagenet.py`.
 
